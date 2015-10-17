@@ -1,9 +1,14 @@
-function gameFile(name, content, options, readOnly) {
+function gameFile(name, content, options) {
   this.name = name;
   this.content = content;
-  this.readOnly = readOnly;
+  this.readOnly = true;
   this.location = null;
-  this.options = options;
+  //this.options = options;
+  if (options) {
+    this.options = options;
+  } else {
+    this.options = [];
+  }
 }
 
 gameFile.prototype.deleteFile = function() {

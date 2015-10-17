@@ -28,6 +28,7 @@ var Game = {
         fg: "#0f0",
       });
       window.addEventListener("keydown", player.keydown);
+      window.addEventListener("keypress", player.keypress);
       var scheduler = new ROT.Scheduler.Simple();
 
       //scheduler.add(typer, true);
@@ -43,6 +44,7 @@ var Game = {
   },
 
   player : {
+    typed: '',
     position : menu2,
     file: null,
     action: ['',false]
@@ -72,34 +74,29 @@ var typer = { //Useless for now
 }
 
 var player = {
-  act: function() {
-
-    var action = Game.player.action;
-    if (action[1]) {
-      if (Game.player.file !== null) { //is a file
-        var options = Game.player.file.options;
-        if (action[0] == 0) {
-          Game.player.file = null;
-        } else if (action[0] <= options.length && action[0] > 0) {
-          var hiddenfunction = options[action[0]-1][1];
-          actionList[hiddenfunction](Game.player.file);
-        }
-      } else { //is a Folder
-        var options = Game.player.position.options;
-        var actions = Game.player.position.actions;
-        if (action[0] <= options.length + actions.length && action[0] > 0) {
-          if (action[0] <= options.length) {
-            var hiddenfunction = options[action[0]-1][1];
-            actionList[hiddenfunction](options[action[0]-1][0]);
-          } else {
-            var hiddenfunction = actions[action[0]-1-options.length][1]
-            actionList[hiddenfunction](actions[action[0]-1-options.length][0]);
-          }
-
-          //Game.player.file = Game.player.position.file[optionName];
-          //Game.player.action[1] = false;
+  act: function(command) {
+    if (Game.player.file !== null) { //is a file
+      var options = Game.player.file.options;
+      if (command == 0) {
+        Game.player.file = null;
+      } else if (command <= options.length && command > 0) {
+        var hiddenfunction = options[command-1][1];
+        actionList[hiddenfunction](Game.player.file);
+      }
+    } else { //is a Folder
+      var options = Game.player.position.options;
+      var actions = Game.player.position.actions;
+      if (command <= options.length + actions.length && command > 0) {
+        if (command <= options.length) {
+          var hiddenfunction = options[command-1][1];
+          actionList[hiddenfunction](options[command-1][0]);
+        } else {
+          var hiddenfunction = actions[command-1-options.length][1]
+          actionList[hiddenfunction](actions[command-1-options.length][0]);
         }
 
+        //Game.player.file = Game.player.position.file[optionName];
+        //Game.player.action[1] = false;
       }
 
     }
@@ -107,20 +104,36 @@ var player = {
   },
   keydown : function(evt) {
       var code = evt.keyCode;
-
-      var vk = "?"; /* find the corresponding constant */
-      for (var name in ROT) {
-          if (ROT[name] == code && name.indexOf("VK_") == 0) { vk = name; }
-      }
-      var number = code-48;
-      if (number >= 0 && number <= 9) {
-        Game.player.action = [code-48, true];
-        player.act();
-        ui.act();
+      if (code == 13) { //return
         Game.messages = [];
-        //Game.engine.unlock();
-      }
+        console.log("Typed: " + Game.player.typed);
+        if (!isNaN(Game.player.typed)) {
+          var number = parseInt(Game.player.typed);
 
+          player.act(number);
+        } else {
+          Game.addMessage('Unrecognized command');
+        }
+        Game.player.typed = '';
+        ui.act();
+
+      } else if (code == 8) { //Backspace
+        if (Game.player.typed.length > 0) {
+          Game.player.typed = Game.player.typed.slice(0, Game.player.typed.length-1);
+          ui.act();
+        }
+        evt.preventDefault();
+      }
+      //player.act(ch);
+      //
+  },
+  keypress : function(evt) {
+    var ch = String.fromCharCode(evt.charCode);
+    var regex=/^[a-zA-Z0-9\s]$/;
+    if (ch.match(regex)) {
+      Game.player.typed += ch;
+      ui.act();
+    }
 
   }
 }

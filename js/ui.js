@@ -12,6 +12,7 @@ var ui = {
     ui.drawBox(Game.messages_x, Game.messages_y, Game.menu_width, 3);
     ui.drawBattery(Game.battery);
     ui.drawTimer();
+    ui.drawTyping();
     ui.drawMessage();
 
     //ui.drawMenuBox();
@@ -22,6 +23,7 @@ var ui = {
     } else {
       ui.drawMenu(firstOfEach(Game.player.position.options).concat(firstOfEach(Game.player.position.actions)));
     }
+    
     //ui.drawTextContent(Game.player.position.content);
     //Game.engine.lock();
     //setTimeout(unlock, 1000/30);
@@ -38,9 +40,13 @@ var ui = {
       }
     }
   },
+  drawTyping : function () { //draw whats being typed
+    Game.display.drawText(5,Game.messages_y+1,Game.player.typed);
+  },
   drawMessage : function () {
     if (Game.messages.length > 0) {
-      Game.display.drawText(2,Game.messages_y+1,Game.messages[Game.messages.length-1]);
+      var message = Game.messages[Game.messages.length-1];
+      Game.display.drawText(Game.width-5-message.length,Game.messages_y+1,message);
     }
 
   },
