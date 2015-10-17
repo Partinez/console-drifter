@@ -1,10 +1,6 @@
-var ui = {
-  act: function() {
-    Game.count++;
-    if (Game.count >= 30) {
-      Game.count = 0;
-    }
-    Game.display.clear();
+var ui = { //manages UI
+  act: function() { //Update screen
+    Game.display.clear(); //delete screen
 
     ui.drawBox(1,1,Game.text_width, Game.stat_height);
     ui.drawBox(Game.text_x, Game.text_y, Game.text_width, Game.text_height);
@@ -15,18 +11,18 @@ var ui = {
     ui.drawTyping();
     ui.drawMessage();
 
-    //ui.drawMenuBox();
-    //ui.drawTextBox();
+
     if (Game.player.file !== null) {
       ui.drawMenu(firstOfEach(Game.player.file.options), false, true);
       ui.drawTextContent(Game.player.file.content);
     } else {
-      ui.drawMenu(firstOfEach(Game.player.position.options).concat(firstOfEach(Game.player.position.actions)));
+      var backAvailable = false;
+      if (Game.player.position.location !== null) {
+        backAvailable = true;
+      }
+      ui.drawMenu(firstOfEach(Game.player.position.options).concat(firstOfEach(Game.player.position.actions)),false,backAvailable);
     }
-    
-    //ui.drawTextContent(Game.player.position.content);
-    //Game.engine.lock();
-    //setTimeout(unlock, 1000/30);
+
 
   },
   updateTop : function() {
@@ -61,14 +57,15 @@ var ui = {
     var y = Game.menu_y+2; //y offset
     var i, temparray,chunk = 4;
     for (i=0; i<options.length; i+=chunk) {
-        temparray = options.slice(i,i+chunk);
-        for (var j = 0; j< temparray.length; j++) {
-          Game.display.drawText(x+i*7, y+j*2,"[%s] %s".format(i+j+1,options[i+j]));
-        }
+      temparray = options.slice(i,i+chunk);
+      for (var j = 0; j< temparray.length; j++) {
+        Game.display.drawText(x+i*7, y+j*2,"[%s] %s".format(i+j+1,options[i+j]));
+      }
+    }
     if (more) { Game.display.drawText(x+56, y+4,"[9] More");}
     if (back) { Game.display.drawText(x+56, y+6,"[0] Back");}
     // do whatever
-    }
+
   },
   drawBox : function(x, y, width, height) {
     for (var w = 0; w<width;w++) {
@@ -84,7 +81,7 @@ var ui = {
     }
   },
   drawTextContent: function(text) {
-    Game.display.drawText(Game.text_x+2,Game.text_y+2,text, Game.text_width-4);
+    Game.display.drawText(Game.text_x+2,Game.text_y+1,text, Game.text_width-4);
   },
   drawTimer : function() {
     var x = 64;

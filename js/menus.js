@@ -12,20 +12,18 @@ function gameFile(name, content, options) {
 }
 
 gameFile.prototype.deleteFile = function() {
-  if (this.readOnly) {
-    return false
-  } else {
-    if (this.location !== null) {
-      var index = this.location['options'].indexOf(this.name);
-      if (index > -1) {
-        this.location['options'].splice(index, 1);
-      }
-      delete this.location.file[this.name];
-      return true
-    } else {
-      return false
+
+  if (this.location !== null) {
+    var index = firstOfEach(this.location.options).indexOf(this.name);
+    if (index > -1) {
+      this.location['options'].splice(index, 1);
     }
+    delete this.location.file[this.name];
+    return true
+  } else {
+    return false
   }
+
 }
 
 function gameFolder(name) {
@@ -33,6 +31,7 @@ function gameFolder(name) {
   this.options = [];
   this.file = {};
   this.actions = [];
+  this.location = null;
 }
 
 gameFolder.prototype.add = function(gFile) {
@@ -40,6 +39,13 @@ gameFolder.prototype.add = function(gFile) {
   this.options.push([gFile.name, 'file']);
   gFile.location = this;
 }
+
+gameFolder.prototype.addFolder = function(gFolder) {
+  this.file[gFolder.name] = gFolder;
+  this.options.push([gFolder.name, 'folder']);
+  gFolder.location = this;
+}
+
 
 gameFolder.prototype.addActions = function(actions) {
   for (var i = 0; i < actions.length; i++) {

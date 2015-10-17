@@ -1,21 +1,59 @@
 
 
 
-var menu2 = new gameFolder('Folder-E');
+
+var messageFolder = new gameFolder('Messages');
 
 
 var fileex = new gameFile("Example", "This is the content.",[ ['Delete file','regularDelete'], ['I am Franz', 'stupid'] ], false);
 
-var file2 = new gameFile("A long file", 'A rather long string of English text, an error message ' +
-      'actually that just keeps going and going -- an error ' +
-      'message to make the Energizer bunny blush (right through ' +
-      'those Schwarzenegger shades)! Where was I? Oh yes, ' +
-      'you\'ve got an error and all the extraneous whitespace is ' +
-      'just gravy.  Have a nice day.',
-      [ ['Delete file','regularDelete'] ], false);
+var greeting = new gameFile(
+  'Greeting letter',
+  'Greetings Mayor.\n'+
+  'Congratulations on your new position. You have been appointed as the new ' +
+  'Mayor of the Seed Ship B-495, self-designated as \'Nels\'.\n' +
+  'Your objective is to mantain the order on the ship and deliver it\s '+
+  'passengers (or inhabitants) safely to it\'s destination. This destination ' +
+  'is not yet known, as our sensors are not powerful enough to detect optimal ' +
+  'habitable conditions. The journey is long, and you will be responsible for ' +
+  'the search of a suitable planet for colonization. \n'+
+  'We won\'t bore you with tecnical information, all you need to know is that ' +
+  'the \'Nels\' is a class-B colonization ship, with capacity for 500 passengers ' +
+  'and the technical capacity to keep them alive. It is your duty to make sure ' +
+  'this is accomplished.\n\n' +
+  'Ales Summeron, MINISTRY OF EXTRASOLAR AFFAIRS',[['Delete file','regularDelete']]);
 
-var intro = new gameFile("Greetings","Greetings! \n This is a test");
-menu2.add(intro);
-menu2.add(fileex);
-menu2.add(file2);
-menu2.addActions([['Edit', 'stupid'],['Use battery','lowerbattery']])
+var consoleusage = new gameFile(
+  'Basic terminal usage',
+  'Work in progress...',[['Delete file','regularDelete']]);
+
+messageFolder.add(greeting);
+messageFolder.add(consoleusage);
+messageFolder.addActions([['Check for new messages', 'checkMessages']]);
+
+
+var agriFolder = new gameFolder('Agricultural issues');
+var indiFolder = new gameFolder('Industrial issues');
+var sociFolder = new gameFolder('Social issues');
+var ecoFolder = new gameFolder('Economical issues');
+
+var manaFolder = new gameFolder('Management');
+manaFolder.addFolder(agriFolder);
+manaFolder.addFolder(indiFolder);
+manaFolder.addFolder(sociFolder);
+manaFolder.addFolder(ecoFolder);
+
+
+
+
+var orderFolder = new gameFolder('Orders');
+orderFolder.addActions([
+  ['Kick a citizen through the airlock', 'wipMessage'],
+  ['Gather information about a citizen', 'wipMessage'],
+]);
+
+
+var baseFolder = new gameFolder('BASE');
+baseFolder.addFolder(manaFolder);
+baseFolder.addFolder(orderFolder);
+baseFolder.addFolder(messageFolder);
