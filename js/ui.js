@@ -7,13 +7,17 @@ var ui = { //manages UI
     ui.drawBox(Game.menu_x, Game.menu_y, Game.menu_width, Game.menu_height);
     ui.drawBox(Game.messages_x, Game.messages_y, Game.menu_width, 3);
     ui.drawBattery(Game.battery);
-    ui.drawTimer();
+    ui.updateTop();
     ui.drawTyping();
     ui.drawMessage();
 
 
+
     if (Game.player.file !== null) {
-      ui.drawMenu(firstOfEach(Game.player.file.options), false, true);
+      if (Game.player.file.options !== undefined) {
+        ui.drawMenu(firstOfEach(Game.player.file.options), false, true);
+      }
+      ui.drawMenu([], false, true);
       ui.drawTextContent(Game.player.file.content);
     } else {
       var backAvailable = false;
@@ -28,6 +32,7 @@ var ui = { //manages UI
   updateTop : function() {
     //ui.drawbg(0,Game.text_y-1);
     ui.drawTimer();
+    ui.drawPopulation();
   },
   drawbg : function(y1,y2) {
     for (var i = 0; i<Game.width; i++) {
@@ -114,5 +119,11 @@ var ui = { //manages UI
     Game.display.drawText(x+21,2,level + "%");
     Game.display.drawText(x+1,2,'Battery:');
 
-  }
+  },
+  drawPopulation : function() {
+    var x = 5;
+    ui.drawBox(x,1,18,3);
+    Game.display.drawText(x+13,2,Object.keys(Game.citizens).length+'');
+    Game.display.drawText(x+2,2,'Population:');
+  },
 }

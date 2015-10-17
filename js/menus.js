@@ -34,9 +34,10 @@ function gameFolder(name) {
   this.location = null;
 }
 
-gameFolder.prototype.add = function(gFile) {
+gameFolder.prototype.add = function(gFile, type) {
+  type = typeof type !== 'undefined' ? type : 'file';
   this.file[gFile.name] = gFile;
-  this.options.push([gFile.name, 'file']);
+  this.options.push([gFile.name, type]);
   gFile.location = this;
 }
 

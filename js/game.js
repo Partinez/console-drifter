@@ -37,7 +37,10 @@ var Game = {
     Game.player.position = messageFolder;
     Game.player.file = greeting;
 
-    ui.act() //Initial screen update
+    setUpGenerators();
+
+    //setTimeout(this.addCitizen(10),10000);
+    ui.act(); //Initial screen update
 
     //Update top section of the screen 5times/s
     setInterval(ui.updateTop,1000/5);
@@ -49,7 +52,36 @@ var Game = {
     file: null,
     action: ['',false]
   },
-    battery : 100, //Battery level
+  idCount : 0,
+  citizens : {},
+  addCitizen : function(number) {
+    for (var i = 0; i <number; i++){
+      var sex = 'F';
+      var surname = Game.surnameG.generate().capitalize();
+      if (sex == 'F') {
+        var name = Game.femaleNameG.generate().capitalize();
+      } else {
+        var name = Game.femaleNameG.generate().capitalize();
+      }
+      var age = 20;
+      var occupation = 'medic';
+      var id = this.idCount;
+      this.idCount++;
+      var citizen = new Citizen(id, name, surname, age, sex, occupation);
+      this.citizens[citizen.id] = citizen;
+    }
+
+  },
+  battery : 100, //Battery level
+  maleNameG : null,
+  femaleNameG : null,
+  surnameG: null,
+  createInitialCitizens : function() {
+    if (this.maleNameG.generate() !== '' && this.femaleNameG.generate() !== '' &&
+        this.surnameG.generate() !== ''  ) {
+      this.addCitizen(10);
+    }
+  },
     //Game functions
   addMessage : function(message) { //Add the message and update the screen
     Game.messages.push(message);
@@ -119,6 +151,64 @@ var player = { //Functions related to the player input
   }
 }
 
+
+
+var setUpGenerators = function() {
+
+  Game.maleNameG = new ROT.StringGenerator();
+  var r = new XMLHttpRequest();
+  r.open("get", "data/malenames.txt", true);
+  r.send();
+
+  r.onreadystatechange = function() {
+    if (r.readyState != 4) { return; }
+
+    var lines = r.responseText.split("\n");
+    while (lines.length) {
+        var line = lines.pop().trim();
+        if (!line) { continue; }
+        Game.maleNameG.observe(line);
+    }
+    Game.createInitialCitizens();
+  }
+
+  Game.femaleNameG = new ROT.StringGenerator();
+  var r1 = new XMLHttpRequest();
+  r1.open("get", "data/femalenames.txt", true);
+  r1.send();
+
+  r1.onreadystatechange = function() {
+    if (r1.readyState != 4) { return; }
+
+    var lines = r1.responseText.split("\n");
+    while (lines.length) {
+        var line = lines.pop().trim();
+        if (!line) { continue; }
+        Game.femaleNameG.observe(line);
+    }
+    Game.createInitialCitizens();
+  }
+  Game.surnameG = new ROT.StringGenerator();
+  var r2 = new XMLHttpRequest();
+  r2.open("get", "data/surnames.txt", true);
+  r2.send();
+
+  r2.onreadystatechange = function() {
+    if (r2.readyState != 4) { return; }
+
+    var lines = r2.responseText.split("\n");
+    while (lines.length) {
+        var line = lines.pop().trim();
+        if (!line) { continue; }
+        Game.surnameG.observe(line);
+    }
+    Game.createInitialCitizens();
+  }
+
+}
+
+
+
 var actionList = {  //List of functions that can be used with menu and file opts
   'regularDelete' : function(gFile) { //Delete file
     if (gFile.deleteFile()) {
@@ -135,6 +225,15 @@ var actionList = {  //List of functions that can be used with menu and file opts
     Game.addMessage('That is not possible at the moment');
   },
   'file' : function(name) { //Open file
+    Game.player.file = Game.player.position.file[name];
+  },
+  'citizenList' : function(name){
+    Game.player.position.file[name].content = 'Name - Surname\n\n';
+    for (var i = 0; i<Object.keys(Game.citizens).length; i++) {
+      var citizen = Game.citizens[i];
+      Game.player.position.file[name].content += citizen.name + ' - ' + citizen.surname + '\n';
+    }
+
     Game.player.file = Game.player.position.file[name];
   },
   'folder' : function (name) {
