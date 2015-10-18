@@ -1,3 +1,4 @@
+ROT.Display.Rect.cache = true
 var Game = {
   width: 80, //width of the screen in characters
   height:40,
@@ -14,7 +15,7 @@ var Game = {
   stat_height: 11, //status box at the top
   messages : [], //list of game messages (shown at the right of the command box)
   display: null,
-  timestart : new Date().getTime() + 3600000,
+  timestart : new Date().getTime(),
   init: function() {
     //initialize the canvas
     this.display = new ROT.Display({width: this.width, height:this.height});
@@ -43,17 +44,35 @@ var Game = {
     ui.act(); //Initial screen update
 
     //Update top section of the screen 5times/s
-    setInterval(ui.updateTop,1000/5);
+    //setInterval(ui.updateTop,1000/5);
+    requestAnimationFrame(Game.mainLoop);
   },
-
+  resources : { //Ships resources
+    food : 100,
+    materials : 100,
+  },
+  policies : {
+    foodConsumption : 1,
+    foodProduction : 2,
+  },
   player : {  //info about the player
     typed: '',
     position : baseFolder,
     file: null,
     action: ['',false]
   },
+  date: 0,
+  speed:1/(10 * 1000), //5 seconds per in-game day
+  lastFrameTimeMs : 0,
+  timestep : 1000/10,
+  maxFPS : 10,
+  delta: 0,
   idCount : 0,
-  citizens : {},
+  citizens : {
+    'farming' :{},
+    'maintenance': {},
+    'unemployed': {}
+  },
   addCitizen : function(number) {
     for (var i = 0; i <number; i++){
       var sex = 'F';
@@ -64,11 +83,11 @@ var Game = {
         var name = Game.femaleNameG.generate().capitalize();
       }
       var age = 20;
-      var occupation = 'medic';
+      var occupation = 'farming';
       var id = this.idCount;
       this.idCount++;
       var citizen = new Citizen(id, name, surname, age, sex, occupation);
-      this.citizens[citizen.id] = citizen;
+      this.citizens[occupation][citizen.id] = citizen;
     }
 
   },
@@ -76,138 +95,75 @@ var Game = {
   maleNameG : null,
   femaleNameG : null,
   surnameG: null,
+  population : function(){
+    var count = 0;
+    var happiness = 0;
+    var professions = Object.keys(Game.citizens);
+    for (var i = 0; i<professions.length; i++) {
+      var citizenIds = Object.keys(Game.citizens[professions[i]]);
+      count += citizenIds.length;
+      for (var j = 0; j<citizenIds.length; j++) {
+        //console.log(Game.citizens[professions[i]][j].needs)
+        happiness += Game.citizens[professions[i]][citizenIds[j]].needs.happiness;
+      }
+    }
+    return [count, happiness/count];
+  },
   createInitialCitizens : function() {
     if (this.maleNameG.generate() !== '' && this.femaleNameG.generate() !== '' &&
         this.surnameG.generate() !== ''  ) {
-      this.addCitizen(10);
+      this.addCitizen(12);
     }
   },
     //Game functions
   addMessage : function(message) { //Add the message and update the screen
     Game.messages.push(message);
     ui.act();
-  }
-}
-
-var player = { //Functions related to the player input
-
-  act: function(command) { //Receives command as input from key event functions.
-    if (Game.player.file !== null) { //is a file
-      var options = Game.player.file.options; //display file options
-      if (command == 0) { //Back
-        Game.player.file = null; //close file
-      } else if (command <= options.length && command > 0) { //Valid option
-        //locate function in hiddenfunction list and execute it.
-        var hiddenfunction = options[command-1][1];
-        actionList[hiddenfunction](Game.player.file);
-      }
-    } else { //is a Folder
-      var options = Game.player.position.options;
-      var actions = Game.player.position.actions;
-      if (command == 0 && Game.player.position.location !== null) {
-        Game.player.position = Game.player.position.location;
-      }
-      if (command <= options.length + actions.length && command > 0) {
-        if (command <= options.length) {
-          var hiddenfunction = options[command-1][1];
-          actionList[hiddenfunction](options[command-1][0]);
-        } else {
-          var hiddenfunction = actions[command-1-options.length][1]
-          actionList[hiddenfunction](actions[command-1-options.length][0]);
-        }
-      }
-    }
   },
-  keydown : function(evt) { //return and backspace
-      var code = evt.keyCode;
-      if (code == 13) { //return
-        Game.messages = []; //clear messages, we are going to display a new one
-        console.log("Typed: " + Game.player.typed);  //debug
-        if (!isNaN(Game.player.typed)) { //sent a number, send it to act.
-          var number = parseInt(Game.player.typed);
-          player.act(number);
-        } else { //handle other commands.
-          Game.addMessage('Unrecognized command');
-        }
-        Game.player.typed = ''; //delete text
-        ui.act(); //update ui.
+  update : function(delta) { //Update game variables.
+    var timeDelta = Game.speed * delta
+    Game.date += timeDelta;
+    Game.shipProduction(timeDelta);
+    Game.citizensConsumtion(timeDelta);
 
-      } else if (code == 8) { //Backspace, delete last characcter
-        if (Game.player.typed.length > 0) {
-          Game.player.typed = Game.player.typed.slice(0, Game.player.typed.length-1);
-          ui.act();
-        }
-        evt.preventDefault(); //prevent the browser from going back
-      }
+
   },
-  keypress : function(evt) {
-    var ch = String.fromCharCode(evt.charCode);
-    var regex=/^[a-zA-Z0-9\s]$/; //is this a valid character?
-    if (ch.match(regex)) {
-      Game.player.typed += ch;
-      ui.act();
-    }
+  shipProduction: function(delta) {
+    var farmers = Object.keys(Game.citizens['farming']).length;
+    Game.resources.food += farmers * Game.policies.foodProduction * delta;
+  },
 
+  citizensConsumtion : function(timeDelta) {
+    //var foodAvailable = this.resources.food/this.population()[0];
+    var foodNext10 = this.population()[0]*this.policies.foodConsumption*10;
+    var foodAvailable = this.policies.foodConsumption*timeDelta*this.resources.food/this.population()[0];
+    var foodConsumed = 0;
+    var professions = Object.keys(Game.citizens);
+    for (var i = 0; i<professions.length; i++) {
+      var citizenIds = Object.keys(Game.citizens[professions[i]]);
+      for (var j = 0; j<citizenIds.length; j++) {
+        foodConsumed += Game.citizens[professions[i]][citizenIds[j]].consume(timeDelta,foodAvailable);
+      }
+    }
+    //console.log(foodConsumed/timeDelta);
+    //console.log(foodAvailable);
+    Game.resources.food -= foodConsumed;
+  },
+  mainLoop: function(timestamp) {
+    if (timestamp < Game.lastFrameTimeMs + (1000 / Game.maxFPS)) {
+      requestAnimationFrame(Game.mainLoop);
+      return;
+    }
+    Game.delta += timestamp - Game.lastFrameTimeMs;
+    Game.lastFrameTimeMs = timestamp;
+    while (Game.delta >= Game.timestep) {
+      Game.update(Game.timestep);
+      Game.delta -= Game.timestep;
+    }
+    ui.updateTop();
+    requestAnimationFrame(Game.mainLoop);
   }
 }
-
-
-
-var setUpGenerators = function() {
-
-  Game.maleNameG = new ROT.StringGenerator();
-  var r = new XMLHttpRequest();
-  r.open("get", "data/malenames.txt", true);
-  r.send();
-
-  r.onreadystatechange = function() {
-    if (r.readyState != 4) { return; }
-
-    var lines = r.responseText.split("\n");
-    while (lines.length) {
-        var line = lines.pop().trim();
-        if (!line) { continue; }
-        Game.maleNameG.observe(line);
-    }
-    Game.createInitialCitizens();
-  }
-
-  Game.femaleNameG = new ROT.StringGenerator();
-  var r1 = new XMLHttpRequest();
-  r1.open("get", "data/femalenames.txt", true);
-  r1.send();
-
-  r1.onreadystatechange = function() {
-    if (r1.readyState != 4) { return; }
-
-    var lines = r1.responseText.split("\n");
-    while (lines.length) {
-        var line = lines.pop().trim();
-        if (!line) { continue; }
-        Game.femaleNameG.observe(line);
-    }
-    Game.createInitialCitizens();
-  }
-  Game.surnameG = new ROT.StringGenerator();
-  var r2 = new XMLHttpRequest();
-  r2.open("get", "data/surnames.txt", true);
-  r2.send();
-
-  r2.onreadystatechange = function() {
-    if (r2.readyState != 4) { return; }
-
-    var lines = r2.responseText.split("\n");
-    while (lines.length) {
-        var line = lines.pop().trim();
-        if (!line) { continue; }
-        Game.surnameG.observe(line);
-    }
-    Game.createInitialCitizens();
-  }
-
-}
-
-
 
 var actionList = {  //List of functions that can be used with menu and file opts
   'regularDelete' : function(gFile) { //Delete file
@@ -224,20 +180,92 @@ var actionList = {  //List of functions that can be used with menu and file opts
   'wipMessage' : function(gFile) {
     Game.addMessage('That is not possible at the moment');
   },
-  'file' : function(name) { //Open file
-    Game.player.file = Game.player.position.file[name];
+  'file' : function(file) { //Open file
+    Game.player.file = file;
   },
-  'citizenList' : function(name){
-    Game.player.position.file[name].content = 'Name - Surname\n\n';
-    for (var i = 0; i<Object.keys(Game.citizens).length; i++) {
-      var citizen = Game.citizens[i];
-      Game.player.position.file[name].content += citizen.name + ' - ' + citizen.surname + '\n';
+  'more' : function(file,[array, index]) {
+    console.log(file);
+    console.log(array);
+    console.log(index);
+    file.content = 'Name Surname - Occupation\n\n';
+    for (var i = index; i<Math.min(array.length,index+10); i++) {
+      file.content += array[i].name + ' ' + array[i].surname + ' - ' +array[i].occupation + '\n';
     }
+    if (array.length - (index+10) < 0) {
+      for (var i = 0; i < file.options.length; i++) {
+        if (file.options[i][0] == "More") {
+          file.options.splice(i,1);
+        }
+      }
+    }
+  },
+  'citizenList' : function(file,array) { //This in an aux function for 'census'
+    var content = '';
+    if (array.length > 10) {
+      file.options.push(['More', 'more', [array,10] ]);
 
-    Game.player.file = Game.player.position.file[name];
+    }
+    for (var i = 0; i<Math.min(array.length,10); i++) {
+      content += array[i].name + ' ' + array[i].surname + ' - ' +array[i].occupation + '\n';
+    }
+    return content;
+  },
+  'census' : function(censusFile){
+    censusFile.content = 'Name Surname - Occupation\n\n';
+    var citizenArray = [];
+    censusFile.options = [];
+    var professions = Object.keys(Game.citizens);
+    for (var i = 0; i<professions.length; i++) {
+      var citizenIds = Object.keys(Game.citizens[professions[i]]);
+      for (var j = 0; j<citizenIds.length; j++) {
+        var citizen = Game.citizens[professions[i]][citizenIds[j]];
+        citizenArray.push(citizen);
+      }
+    }
+    censusFile.content += actionList.citizenList(censusFile, citizenArray);
+    Game.player.file = censusFile;
   },
   'folder' : function (name) {
     Game.player.position = Game.player.position.file[name];
+  },
+  increaseProf : function(proFile, prof) {
+    var citId = Object.keys(Game.citizens.unemployed).random();
+    Game.citizens.unemployed[citId].changeProf(prof);
+    this.profDetails(proFile,prof);
+  },
+  decreaseProf : function(proFile, prof) {
+    var citId = Object.keys(Game.citizens[prof]).random();
+    Game.citizens[prof][citId].changeProf('unemployed');
+    this.profDetails(proFile, prof);
+  },
+  'profDetails' : function(proFile, prof) {
+    proFile.content = '';
+    var professions = Object.keys(Game.citizens);
+    for (var i = 0; i<professions.length;i++) {
+      proFile.content += professions[i] + ' - ' + Object.keys(Game.citizens[professions[i]]).length + '\n';
+    }
+    proFile.options = [];
+    if (Object.keys(Game.citizens.unemployed).length > 0) {
+      proFile.options.push(['More', 'increaseProf', prof]);
+    } else {
+      proFile.options.push(['', '']);
+    }
+    if (Object.keys(Game.citizens[prof]).length > 0) {
+      proFile.options.push(['Less', 'decreaseProf', prof]);
+    } else {
+      proFile.options.push(['', '']);
+    }
+    proFile.options.push(['Back', 'professions']);
+  },
+  'professions' : function(proFile) {
+    proFile.content = '';
+    proFile.options = [];
+    var professions = Object.keys(Game.citizens);
+    for (var i = 0; i<professions.length;i++) {
+      proFile.content += professions[i] + ' - ' + Object.keys(Game.citizens[professions[i]]).length + '\n';
+      proFile.options.push([professions[i],'profDetails',professions[i]]);
+    }
+    Game.player.file = proFile;
   },
   'lowerbattery': function() {
     Game.battery = Game.battery - 10;

@@ -6,10 +6,11 @@ var ui = { //manages UI
     ui.drawBox(Game.text_x, Game.text_y, Game.text_width, Game.text_height);
     ui.drawBox(Game.menu_x, Game.menu_y, Game.menu_width, Game.menu_height);
     ui.drawBox(Game.messages_x, Game.messages_y, Game.menu_width, 3);
-    ui.drawBattery(Game.battery);
+
     ui.updateTop();
     ui.drawTyping();
     ui.drawMessage();
+
 
 
 
@@ -31,13 +32,15 @@ var ui = { //manages UI
   },
   updateTop : function() {
     //ui.drawbg(0,Game.text_y-1);
-    ui.drawTimer();
+    ui.drawDate();
     ui.drawPopulation();
+    ui.drawResources();
+    ui.drawBattery(Game.battery);
   },
-  drawbg : function(y1,y2) {
-    for (var i = 0; i<Game.width; i++) {
-      for (var j=y1; j<y2;j++) {
-        Game.display.draw(i,j,' ');
+  drawbg : function(x,y,width, height) { //computationally intensive
+    for (var i = 0; i<width; i++) {
+      for (var j=0; j<height;j++) {
+        Game.display.draw(x+i,y+j,' ');
       }
     }
   },
@@ -50,6 +53,20 @@ var ui = { //manages UI
       Game.display.drawText(Game.width-5-message.length,Game.messages_y+1,message);
     }
 
+  },
+  drawResources : function() {
+    var x = 2; //x offset
+    var y = 5; //y offset
+    var i, temparray,chunk = 4;
+    var order = ['food','materials'];
+    var resources = Game.resources;
+    for (i=0; i < order.length; i+=chunk) {
+      temparray = order.slice(i,i+chunk);
+      for (var j = 0; j< temparray.length; j++) {
+        ui.drawbg(x+i*7,y+j,15,1);
+        Game.display.drawText(x+i*7, y+j,"%s: %s".format(order[i+j].capitalize(),Math.floor(resources[order[i+j]])));
+      }
+    }
   },
   drawMenu: function(options, more, back) {
     more = typeof more !== 'undefined' ? more : false;
@@ -88,6 +105,12 @@ var ui = { //manages UI
   drawTextContent: function(text) {
     Game.display.drawText(Game.text_x+2,Game.text_y+1,text, Game.text_width-4);
   },
+  drawDate: function() {
+    var x = 64;
+    ui.drawBox(x,1,15,3);
+    Game.display.drawText(x+1,2,'Date:');
+    Game.display.drawText(x + 7,2,Math.floor(Game.date)+'')
+  },
   drawTimer : function() {
     var x = 64;
     ui.drawBox(x,1,15,3);
@@ -123,7 +146,11 @@ var ui = { //manages UI
   drawPopulation : function() {
     var x = 5;
     ui.drawBox(x,1,18,3);
-    Game.display.drawText(x+13,2,Object.keys(Game.citizens).length+'');
+    ui.drawbg(x+13,2,4,1);
+    Game.display.drawText(x+13,2,Game.population()[0]+'');
     Game.display.drawText(x+2,2,'Population:');
+    ui.drawbg(x+28,2,4,1);
+    Game.display.drawText(x+28,2,Math.floor(Game.population()[1])+'');
+    Game.display.drawText(x+17,2,'Happiness:');
   },
 }

@@ -41,7 +41,9 @@ var indiFolder = new gameFolder('Industrial issues');
 
 var sociFolder = new gameFolder('Social issues');
 var census = new gameFile('Census', 'It did not work.');
-sociFolder.add(census, 'citizenList');
+sociFolder.add(census, 'census');
+var professions = new gameFile('Occupations', 'Something didn\'t work.')
+sociFolder.add(professions, 'professions');
 
 var ecoFolder = new gameFolder('Economical issues');
 
