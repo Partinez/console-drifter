@@ -9,7 +9,6 @@ var player = { //Functions related to the player input
       } else if (command <= options.length && command > 0) { //Valid option
         //locate function in hiddenfunction list and execute it.
         var hiddenfunction = options[command-1][1];
-        console.log('Option '+ options[command-1][1] + 'arg: ' + options[command-1][2]);
         if (hiddenfunction !== '') { //Avoid "empty" options
           actionList[hiddenfunction](Game.player.file, options[command-1][2]); //with optional arguments
         }
@@ -41,9 +40,9 @@ var player = { //Functions related to the player input
   },
   keydown : function(evt) { //return and backspace
       var code = evt.keyCode;
-      if (code == 13) { //return
+      var commands = false;
+      if (code == 13 && commands) { //return
         Game.messages = []; //clear messages, we are going to display a new one
-        console.log("Typed: " + Game.player.typed);  //debug
         if (!isNaN(Game.player.typed)) { //sent a number, send it to act.
           var number = parseInt(Game.player.typed);
           player.act(number);
@@ -53,7 +52,7 @@ var player = { //Functions related to the player input
         Game.player.typed = ''; //delete text
         ui.act(); //update ui.
 
-      } else if (code == 8) { //Backspace, delete last characcter
+      } else if (code == 8 && commands) { //Backspace, delete last characcter
         if (Game.player.typed.length > 0) {
           Game.player.typed = Game.player.typed.slice(0, Game.player.typed.length-1);
           ui.act();
@@ -63,9 +62,11 @@ var player = { //Functions related to the player input
   },
   keypress : function(evt) {
     var ch = String.fromCharCode(evt.charCode);
-    var regex=/^[a-zA-Z0-9\s]$/; //is this a valid character?
+    //var regex=/^[a-zA-Z0-9\s]$/; //UNCOMMENT FOR COMMANDSis this a valid character?
+    var regex= /^[0-9]$/; //COMMENT FOR COMMANDS
     if (ch.match(regex)) {
-      Game.player.typed += ch;
+      //Game.player.typed += ch; UNCOMMENT FOR COMMANDS
+      player.act(ch)
       ui.act();
     }
 

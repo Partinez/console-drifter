@@ -64,7 +64,7 @@ var ui = { //manages UI
       temparray = order.slice(i,i+chunk);
       for (var j = 0; j< temparray.length; j++) {
         ui.drawbg(x+i*7,y+j,15,1);
-        Game.display.drawText(x+i*7, y+j,"%s: %s".format(order[i+j].capitalize(),Math.floor(resources[order[i+j]])));
+        Game.display.drawText(x+i*7, y+j,"%s: %s/%s".format(order[i+j].capitalize(),Math.floor(resources[order[i+j]]),Game.storage[order[i+j]]));
       }
     }
   },
@@ -108,7 +108,7 @@ var ui = { //manages UI
   drawDate: function() {
     var x = 64;
     ui.drawBox(x,1,15,3);
-    Game.display.drawText(x+1,2,'Date:');
+    Game.display.drawText(x+1,2,'Weeks:');
     Game.display.drawText(x + 7,2,Math.floor(Game.date)+'')
   },
   drawTimer : function() {

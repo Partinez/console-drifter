@@ -51,6 +51,11 @@ var Game = {
     food : 100,
     materials : 100,
   },
+  storage : {
+    food: 1000,
+    materials : 1000,
+    embryos : 1,
+  },
   policies : {
     foodConsumption : 1,
     foodProduction : 2,
@@ -71,9 +76,11 @@ var Game = {
   citizens : {
     'farming' :{},
     'maintenance': {},
-    'unemployed': {}
+    'unemployed': {},
+    'embryo' : {},
+    'child' : {}
   },
-  addCitizen : function(number) {
+  addCitizens : function(number) {
     for (var i = 0; i <number; i++){
       var sex = 'F';
       var surname = Game.surnameG.generate().capitalize();
@@ -103,8 +110,8 @@ var Game = {
       var citizenIds = Object.keys(Game.citizens[professions[i]]);
       count += citizenIds.length;
       for (var j = 0; j<citizenIds.length; j++) {
-        //console.log(Game.citizens[professions[i]][j].needs)
-        happiness += Game.citizens[professions[i]][citizenIds[j]].needs.happiness;
+        //console.log(Game.citizens[professions[i]][j].stats)
+        happiness += Game.citizens[professions[i]][citizenIds[j]].stats.happiness;
       }
     }
     return [count, happiness/count];
@@ -112,7 +119,7 @@ var Game = {
   createInitialCitizens : function() {
     if (this.maleNameG.generate() !== '' && this.femaleNameG.generate() !== '' &&
         this.surnameG.generate() !== ''  ) {
-      this.addCitizen(12);
+      this.addCitizens(12);
     }
   },
     //Game functions
@@ -123,8 +130,8 @@ var Game = {
   update : function(delta) { //Update game variables.
     var timeDelta = Game.speed * delta
     Game.date += timeDelta;
-    Game.shipProduction(timeDelta);
-    Game.citizensConsumtion(timeDelta);
+    //Game.shipProduction(timeDelta);
+    Game.citizensUpdate(timeDelta);
 
 
   },
@@ -133,21 +140,42 @@ var Game = {
     Game.resources.food += farmers * Game.policies.foodProduction * delta;
   },
 
-  citizensConsumtion : function(timeDelta) {
+  citizensUpdate : function(timeDelta) {
+
+    var cumulativeAnswer = {
+      production : {
+        'food' : 0,
+      },
+      consumption : {
+        'food' : 0,
+      }
+    }
+
     //var foodAvailable = this.resources.food/this.population()[0];
-    var foodNext10 = this.population()[0]*this.policies.foodConsumption*10;
     var foodAvailable = this.policies.foodConsumption*timeDelta*this.resources.food/this.population()[0];
-    var foodConsumed = 0;
+    var info = {
+      'foodAvailable' :foodAvailable,
+    };
     var professions = Object.keys(Game.citizens);
     for (var i = 0; i<professions.length; i++) {
       var citizenIds = Object.keys(Game.citizens[professions[i]]);
       for (var j = 0; j<citizenIds.length; j++) {
-        foodConsumed += Game.citizens[professions[i]][citizenIds[j]].consume(timeDelta,foodAvailable);
+        var answer = Game.citizens[professions[i]][citizenIds[j]].update(timeDelta,info);
+        cumulativeAnswer.production.food += 2*answer.produced.food;
+        cumulativeAnswer.consumption.food += answer.consumed.food;
       }
     }
     //console.log(foodConsumed/timeDelta);
     //console.log(foodAvailable);
-    Game.resources.food -= foodConsumed;
+    Game.resources.food += cumulativeAnswer.production.food - cumulativeAnswer.consumption.food;
+    var rKeys = Object.keys(Game.resources);
+    for (var i = 0; i<rKeys.length; i++) {
+      if (Game.resources[rKeys[i]] > Game.storage[rKeys[i]]) {
+        Game.resources[rKeys[i]] = Game.storage[rKeys[i]];
+      } else if (Game.resources[rKeys[i]] < 0) {
+        Game.resources[rKeys[i]] = 0;
+      }
+    }
   },
   mainLoop: function(timestamp) {
     if (timestamp < Game.lastFrameTimeMs + (1000 / Game.maxFPS)) {
@@ -184,9 +212,6 @@ var actionList = {  //List of functions that can be used with menu and file opts
     Game.player.file = file;
   },
   'more' : function(file,[array, index]) {
-    console.log(file);
-    console.log(array);
-    console.log(index);
     file.content = 'Name Surname - Occupation\n\n';
     for (var i = index; i<Math.min(array.length,index+10); i++) {
       file.content += array[i].name + ' ' + array[i].surname + ' - ' +array[i].occupation + '\n';
@@ -263,11 +288,49 @@ var actionList = {  //List of functions that can be used with menu and file opts
     var professions = Object.keys(Game.citizens);
     for (var i = 0; i<professions.length;i++) {
       proFile.content += professions[i] + ' - ' + Object.keys(Game.citizens[professions[i]]).length + '\n';
-      proFile.options.push([professions[i],'profDetails',professions[i]]);
+      if ( !isIn(professions[i],['unemployed', 'child', 'embryo'])) {
+        proFile.options.push([professions[i],'profDetails',professions[i]]);
+      }
+
     }
     Game.player.file = proFile;
   },
-  'lowerbattery': function() {
-    Game.battery = Game.battery - 10;
+  'embryoEdict': function(edictFile) {
+    edictFile.options = [];
+    if (Object.keys(Game.citizens.embryo).length >= Game.storage.embryos) {
+      edictFile.content = 'Greetings, Mayor:\n' +
+      'Unfortunately, there are no artificial wombs available.\n' +
+      'You can wait until one becomes free or maybe build another one.\n';
+      edictFile.options.push(['Thank you for your help', 'exitFile']);
+    } else {
+    edictFile.content = 'Greetings, Mayor:\n' +
+      'I am glad to see you are planning to increase the population!\n' +
+      'We currently have '+ Game.storage.embryos + ' artificial womb available.' +
+      ' The new embryo will grow in the womb for 40 weeks, and then the new citizen '+
+      'will be born. For him or her to be able to contribute to society we will need ' +
+      'to wait 5 years, though.\n' +
+      'Do you want to grow a new embryo?';
+      edictFile.options.push(['YES, I want a female embryo.', 'startEmbryo', 'F']);
+      edictFile.options.push(['YES, I want a male embryo.', 'startEmbryo', 'M']);
+    }
+    Game.player.file = edictFile
+  },
+  'exitFile' : function() {
+    Game.player.file = null;
+  },
+  'startEmbryo': function(orderFile, sex) {
+    var surname = Game.surnameG.generate().capitalize();
+    if (sex == 'F') {
+      var name = Game.femaleNameG.generate().capitalize();
+    } else {
+      var name = Game.maleNameG.generate().capitalize();
+    }
+    var age = -40;
+    var occupation = 'embryo';
+    var id = Game.idCount;
+    Game.idCount++;
+    var citizen = new Citizen(id, name, surname, age, sex, occupation);
+    Game.citizens[occupation][citizen.id] = citizen;
+    Game.player.file = null;
   }
 }

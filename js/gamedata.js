@@ -17,9 +17,9 @@ var greeting = new gameFile(
   'is yet to be determined, as our sensors are not powerful enough to detect optimal ' +
   'habitable conditions. The journey is long, and you will be responsible for ' +
   'the search of a suitable planet for colonization. \n'+
-  '\t\tYou do not need tecnical knowledge, all you need to know is that ' +
+  '\t\tYou do not need technical knowledge, all you need to know is that ' +
   'the \'Nels\' is a class-B colonization ship, with capacity for 500 passengers ' +
-  'and the technical capacity to keep them alive. It is your duty to make sure ' +
+  'and the equipment to keep them alive. It is your duty to make sure ' +
   'this is accomplished.\n\n' +
   '\t\tAles Summeron, MINISTRY OF EXTRASOLAR AFFAIRS',[['Delete file','regularDelete']]);
 
@@ -56,14 +56,15 @@ manaFolder.addFolder(ecoFolder);
 
 
 
-var orderFolder = new gameFolder('Orders');
-orderFolder.addActions([
-  ['Kick a citizen through the airlock', 'wipMessage'],
+var edictFolder = new gameFolder('New Edict');
+var newBaby= new gameFile('Make a new baby!', 'Something didn\'t work.');
+edictFolder.add(newBaby, 'embryoEdict');
+edictFolder.addActions([
   ['Gather information about a citizen', 'wipMessage'],
 ]);
 
 
 var baseFolder = new gameFolder('BASE');
 baseFolder.addFolder(manaFolder);
-baseFolder.addFolder(orderFolder);
+baseFolder.addFolder(edictFolder);
 baseFolder.addFolder(messageFolder);
