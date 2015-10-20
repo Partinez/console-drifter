@@ -75,7 +75,7 @@ var Game = {
   idCount : 0,
   citizens : {
     'farming' :{},
-    'maintenance': {},
+    'engineering': {},
     'unemployed': {},
     'embryo' : {},
     'child' : {}
@@ -97,6 +97,9 @@ var Game = {
       this.citizens[occupation][citizen.id] = citizen;
     }
 
+  },
+  built : { //built structures
+    'cold chamber' : 1,
   },
   battery : 100, //Battery level
   maleNameG : null,
@@ -211,7 +214,9 @@ var actionList = {  //List of functions that can be used with menu and file opts
   'file' : function(file) { //Open file
     Game.player.file = file;
   },
-  'more' : function(file,[array, index]) {
+  'more' : function(file,arrayPar) {
+    var array = arrayPar[0];
+    var index = arrayPar[1];
     file.content = 'Name Surname - Occupation\n\n';
     for (var i = index; i<Math.min(array.length,index+10); i++) {
       file.content += array[i].name + ' ' + array[i].surname + ' - ' +array[i].occupation + '\n';
