@@ -99,7 +99,10 @@ var Game = {
 
   },
   built : { //built structures
-    'cold chamber' : 1,
+    'coldRoom' : 1,
+  },
+  building : {
+    idCount: 0,
   },
   battery : 100, //Battery level
   maleNameG : null,
