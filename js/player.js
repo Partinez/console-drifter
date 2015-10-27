@@ -10,11 +10,12 @@ var player = { //Functions related to the player input
         //locate function in hiddenfunction list and execute it.
         var hiddenfunction = options[command-1][1];
         if (hiddenfunction !== '') { //Avoid "empty" options
-          actionList[hiddenfunction](Game.player.file, options[command-1][2]); //with optional arguments
+          Game.player.aux = options[command-1][2];
+          viewList[hiddenfunction](Game.player.file, options[command-1][2]); //with optional arguments
         }
 
       }
-    } else { //is a Folder
+    } else { //Player is in a Folder
       var options = Game.player.position.options;
       var actions = Game.player.position.actions;
       if (command == 0 && Game.player.position.location !== null) {
@@ -27,13 +28,14 @@ var player = { //Functions related to the player input
             Game.player.position = Game.player.position.file[options[command-1][0]];
           } else {
             var file = Game.player.position.file[options[command-1][0]];
-            actionList[hiddenfunction](file);
+            viewList[hiddenfunction](file);
+            Game.player.view = hiddenfunction;
           }
 
         } else {
           var hiddenfunction = actions[command-1-options.length][1]
           var file = Game.player.position.file[actions[command-1-options.length][0]];
-          actionList[hiddenfunction](file);
+          viewList[hiddenfunction](file);
         }
       }
     }
@@ -66,6 +68,7 @@ var player = { //Functions related to the player input
     var regex= /^[0-9]$/; //COMMENT FOR COMMANDS
     if (ch.match(regex)) {
       //Game.player.typed += ch; UNCOMMENT FOR COMMANDS
+      Game.messages = []; //Comment for commands
       player.act(ch)
       ui.act();
     }

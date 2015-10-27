@@ -36,9 +36,12 @@ var Game = {
 
     //set initial location
     Game.player.position = messageFolder;
-    Game.player.file = greeting;
+    Game.player.file = null;
 
     setUpGenerators();
+    var nStr = new Structure('Artificial womb', 'artificialWomb');
+    nStr.start();
+    nStr.finish();
 
     //setTimeout(this.addCitizen(10),10000);
     ui.act(); //Initial screen update
@@ -52,9 +55,14 @@ var Game = {
     materials : 100,
   },
   storage : {
-    food: 1000,
-    materials : 1000,
+    food: 100,
+    materials : 100,
     embryos : 1,
+  },
+  modifiers:  {
+    foodProd : 2,
+    foodCons : 1,
+    builProd : 4,
   },
   policies : {
     foodConsumption : 1,
@@ -64,7 +72,9 @@ var Game = {
     typed: '',
     position : baseFolder,
     file: null,
-    action: ['',false]
+    //action: ['',false],
+    view : '',
+    aux: null, //Additional info for the view.
   },
   date: 0,
   speed:1/(10 * 1000), //5 seconds per in-game day
@@ -89,7 +99,7 @@ var Game = {
       } else {
         var name = Game.femaleNameG.generate().capitalize();
       }
-      var age = 20;
+      var age = 52*randomRange(20,30); //to weeks
       var occupation = 'farming';
       var id = this.idCount;
       this.idCount++;
@@ -99,8 +109,11 @@ var Game = {
 
   },
   built : { //built structures
-    'coldRoom' : 1,
   },
+  avaStr : [
+    'coldRoom',
+    'storageRoom'
+  ],
   building : {
     idCount: 0,
   },
@@ -136,14 +149,17 @@ var Game = {
   update : function(delta) { //Update game variables.
     var timeDelta = Game.speed * delta
     Game.date += timeDelta;
-    //Game.shipProduction(timeDelta);
+    Game.shipProduction(timeDelta);
     Game.citizensUpdate(timeDelta);
 
 
   },
   shipProduction: function(delta) {
-    var farmers = Object.keys(Game.citizens['farming']).length;
-    Game.resources.food += farmers * Game.policies.foodProduction * delta;
+    Game.storage = {
+      food : Math.max(100,1000*builtStr('coldRoom')),
+      materials : Math.max(100,1000*builtStr('storageRoom')),
+      embryos : builtStr('artificialWomb'),
+    }
   },
 
   citizensUpdate : function(timeDelta) {
@@ -151,6 +167,7 @@ var Game = {
     var cumulativeAnswer = {
       production : {
         'food' : 0,
+        'building' : 0,
       },
       consumption : {
         'food' : 0,
@@ -167,8 +184,9 @@ var Game = {
       var citizenIds = Object.keys(Game.citizens[professions[i]]);
       for (var j = 0; j<citizenIds.length; j++) {
         var answer = Game.citizens[professions[i]][citizenIds[j]].update(timeDelta,info);
-        cumulativeAnswer.production.food += 2*answer.produced.food;
-        cumulativeAnswer.consumption.food += answer.consumed.food;
+        cumulativeAnswer.production.building += Game.modifiers.builProd*answer.produced.building;
+        cumulativeAnswer.production.food += Game.modifiers.foodProd*answer.produced.food;
+        cumulativeAnswer.consumption.food += Game.modifiers.foodCons*answer.consumed.food;
       }
     }
     //console.log(foodConsumed/timeDelta);
@@ -180,6 +198,22 @@ var Game = {
         Game.resources[rKeys[i]] = Game.storage[rKeys[i]];
       } else if (Game.resources[rKeys[i]] < 0) {
         Game.resources[rKeys[i]] = 0;
+      }
+    }
+
+    //Buildings pick a random one and build!
+    var buildings = Object.keys(Game.building).randomize();
+    if (buildings.length > 1 ) {
+      if (buildings[0] !== 'idCount') {
+        var typeId = 0;
+      } else {
+        var typeId = 1;
+      }
+      var buildingId = Object.keys(Game.building[buildings[typeId]]);
+      var required = Game.building[buildings[typeId]][buildingId].reqProgMats(cumulativeAnswer.production.building);
+      if (required <= Game.resources.materials) {
+        Game.resources.materials -= required;
+        Game.building[buildings[typeId]][buildingId].build(cumulativeAnswer.production.building);
       }
     }
   },
@@ -194,12 +228,12 @@ var Game = {
       Game.update(Game.timestep);
       Game.delta -= Game.timestep;
     }
-    ui.updateTop();
+    ui.act();
     requestAnimationFrame(Game.mainLoop);
   }
 }
 
-var actionList = {  //List of functions that can be used with menu and file opts
+var viewList = {  //List of functions that can be used with menu and file opts
   'regularDelete' : function(gFile) { //Delete file
     if (gFile.deleteFile()) {
       Game.player.file = null;
@@ -217,12 +251,13 @@ var actionList = {  //List of functions that can be used with menu and file opts
   'file' : function(file) { //Open file
     Game.player.file = file;
   },
-  'more' : function(file,arrayPar) {
+  'more' : function(file,arrayPar) { //
+    arrayPar = Game.player.aux;
     var array = arrayPar[0];
     var index = arrayPar[1];
     file.content = 'Name Surname - Occupation\n\n';
     for (var i = index; i<Math.min(array.length,index+10); i++) {
-      file.content += array[i].name + ' ' + array[i].surname + ' - ' +array[i].occupation + '\n';
+      file.content += array[i].name + ' ' + array[i].surname + ' - ' +array[i].occupation + ' - '+ Math.floor(array[i].age/52)+'\n';
     }
     if (array.length - (index+10) < 0) {
       for (var i = 0; i < file.options.length; i++) {
@@ -233,20 +268,23 @@ var actionList = {  //List of functions that can be used with menu and file opts
     }
   },
   'citizenList' : function(file,array) { //This in an aux function for 'census'
+    Game.player.view = 'citizenList';
+    array = Game.player.aux;
     var content = '';
+    var options = [];
     if (array.length > 10) {
-      file.options.push(['More', 'more', [array,10] ]);
+      options.push(['More', 'more', [array,10] ]);
 
     }
     for (var i = 0; i<Math.min(array.length,10); i++) {
-      content += array[i].name + ' ' + array[i].surname + ' - ' +array[i].occupation + '\n';
+      content += array[i].name + ' ' + array[i].surname + ' - ' +array[i].occupation + ' - '+ Math.floor(array[i].age/52)+'\n';
     }
-    return content;
+    return [content, options];
   },
   'census' : function(censusFile){
-    censusFile.content = 'Name Surname - Occupation\n\n';
+    Game.player.view = 'census';
+    censusFile.content = 'Name Surname - Occupation - Age\n\n';
     var citizenArray = [];
-    censusFile.options = [];
     var professions = Object.keys(Game.citizens);
     for (var i = 0; i<professions.length; i++) {
       var citizenIds = Object.keys(Game.citizens[professions[i]]);
@@ -255,7 +293,10 @@ var actionList = {  //List of functions that can be used with menu and file opts
         citizenArray.push(citizen);
       }
     }
-    censusFile.content += actionList.citizenList(censusFile, citizenArray);
+    Game.player.aux = citizenArray;
+    response = viewList.citizenList(censusFile, citizenArray);
+    censusFile.content += response[0];
+    censusFile.options = response[1];
     Game.player.file = censusFile;
   },
   'folder' : function (name) {
@@ -272,6 +313,8 @@ var actionList = {  //List of functions that can be used with menu and file opts
     this.profDetails(proFile, prof);
   },
   'profDetails' : function(proFile, prof) {
+    Game.player.view = 'profDetails';
+    prof = Game.player.aux;
     proFile.content = '';
     var professions = Object.keys(Game.citizens);
     for (var i = 0; i<professions.length;i++) {
@@ -288,9 +331,10 @@ var actionList = {  //List of functions that can be used with menu and file opts
     } else {
       proFile.options.push(['', '']);
     }
-    proFile.options.push(['Back', 'professions']);
+    proFile.options.push(['Cancel', 'professions']);
   },
   'professions' : function(proFile) {
+    Game.player.view = 'professions';
     proFile.content = '';
     proFile.options = [];
     var professions = Object.keys(Game.citizens);
@@ -303,6 +347,60 @@ var actionList = {  //List of functions that can be used with menu and file opts
     }
     Game.player.file = proFile;
   },
+  'newStruct' : function(bFile, struct){
+    var nStr = new Structure(structuresData[struct].name, struct);
+    nStr.start();
+    Game.player.view = 'buildings';
+    viewList['buildings'](Game.player.file);
+  },
+  'buildOpt' : function(bFile) {
+    Game.player.view = 'buildOpt';
+    bFile.options = [];
+    Game.avaStr.forEach(function(structure) {
+      var sd =structuresData[structure];
+      if (!isIn(structure, Object.keys(Game.building))) {
+        bFile.options.push(['New ' +sd.name + ' (' + sd.reqMat + ' material)', 'newStruct', structure]);
+      }
+    });
+    bFile.options.push(['Cancel', 'buildings']);
+  },
+  'buildings' : function(bFile) {
+    Game.player.view = 'buildings';
+    bFile.options = [['Build something', 'buildOpt']];
+    bFile.content = '';
+    var bKeys = Object.keys(Game.building);
+    //var bTypes = ['coldRoom'];
+    bFile.content += 'In progress:\n\n';
+    if(Object.keys(Game.building).length < 2) {
+      bFile.content += 'No new structures are being built.\n';
+    }
+    for (var key in Game.building) {
+      if (Game.building.hasOwnProperty(key) && key !== 'idCount') {
+        var name = structuresData[key].name;
+        for (var id in Game.building[key]) {
+          if (Game.building[key].hasOwnProperty(id)) {
+            bFile.content += name + ': ' + Math.round(Game.building[key][id].completed() * 1000) / 10 + '%\n';
+          }
+        }
+      }
+    }
+    bFile.content += '\n\nBuilt structures:\n\n';
+    for (var type in Game.built) {
+      if (Game.built.hasOwnProperty(type)) {
+        var name = structuresData[type].name;
+        if (builtStr(type) > 0) {
+          var amount = builtStr(type);
+          bFile.content += amount + ' ' + name;
+          if (amount != 1) {
+            bFile.content += 's\n';
+          } else {
+            bFile.content += '\n';
+          }
+        }
+      }
+    }
+    Game.player.file = bFile;
+  },
   'embryoEdict': function(edictFile) {
     edictFile.options = [];
     if (Object.keys(Game.citizens.embryo).length >= Game.storage.embryos) {
@@ -313,8 +411,8 @@ var actionList = {  //List of functions that can be used with menu and file opts
     } else {
     edictFile.content = 'Greetings, Mayor:\n' +
       'I am glad to see you are planning to increase the population!\n' +
-      'We currently have '+ Game.storage.embryos + ' artificial womb available.' +
-      ' The new embryo will grow in the womb for 40 weeks, and then the new citizen '+
+      'We currently have '+ Game.storage.embryos + ' artificial womb available. ' +
+      'The new embryo will grow in the womb for 40 weeks, and then the new citizen '+
       'will be born. For him or her to be able to contribute to society we will need ' +
       'to wait 5 years, though.\n' +
       'Do you want to grow a new embryo?';

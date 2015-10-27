@@ -9,3 +9,7 @@ firstOfEach = function(array) {
 isIn = function(item, array) {
   return (array.indexOf(item) != -1)
 }
+
+randomRange = function(min,max) {
+  return (Math.random()*(max-min))+min
+}

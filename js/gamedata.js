@@ -35,8 +35,9 @@ messageFolder.addActions([['Check for new messages', 'checkMessages']]);
 var agriFolder = new gameFolder('Agricultural issues');
 
 
-var indiFolder = new gameFolder('Industrial issues');
-
+var indiFolder = new gameFolder('Infrastructure');
+var buildingsFile = new gameFile('Status','It did not work');
+indiFolder.add(buildingsFile, 'buildings');
 
 
 var sociFolder = new gameFolder('Social issues');

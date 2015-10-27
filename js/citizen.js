@@ -35,6 +35,7 @@ Citizen.prototype.update = function(timeDelta,info) {
     },
     produced : {
       food : 0,
+      building : 0,
     }
   };
 
@@ -66,7 +67,9 @@ Citizen.prototype.update = function(timeDelta,info) {
 
   //production
   if (this.occupation == 'farming') {
-    answer.produced.food = timeDelta*(this.stats.productivity/100)*(1+this.genes.str+this.genes.con);
+    answer.produced.food = timeDelta*(this.stats.productivity/100)*(1+this.genes.str+this.genes.wis);
+  } else if (this.occupation == 'engineering') {
+    answer.produced.building = timeDelta*(this.stats.productivity/100)*(1+this.genes.int+this.genes.con);
   }
 
   return answer;

@@ -15,6 +15,8 @@ var ui = { //manages UI
 
 
     if (Game.player.file !== null) {
+      //Run view code
+      viewList[Game.player.view](Game.player.file);
       if (Game.player.file.options !== undefined) {
         ui.drawMenu(firstOfEach(Game.player.file.options), false, true);
       }
@@ -52,7 +54,6 @@ var ui = { //manages UI
       var message = Game.messages[Game.messages.length-1];
       Game.display.drawText(Game.width-5-message.length,Game.messages_y+1,message);
     }
-
   },
   drawResources : function() {
     var x = 2; //x offset
