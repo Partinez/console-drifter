@@ -60,6 +60,10 @@ var player = { //Functions related to the player input
           ui.act();
         }
         evt.preventDefault(); //prevent the browser from going back
+      } else if (code == 32) { //Space for back
+        Game.messages = []; //Comment for commands
+        player.act('0');
+        ui.act();
       }
   },
   keypress : function(evt) {
@@ -69,7 +73,7 @@ var player = { //Functions related to the player input
     if (ch.match(regex)) {
       //Game.player.typed += ch; UNCOMMENT FOR COMMANDS
       Game.messages = []; //Comment for commands
-      player.act(ch)
+      player.act(ch);
       ui.act();
     }
 

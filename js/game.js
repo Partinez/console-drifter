@@ -14,10 +14,13 @@ var Game = {
   messages_y: 36,
   stat_height: 11, //status box at the top
   messages : [], //list of game messages (shown at the right of the command box)
+  news : [],
   display: null,
   timestart : new Date().getTime(),
+  loading : null,
   init: function() {
     //initialize the canvas
+    this.loading = true;
     this.display = new ROT.Display({width: this.width, height:this.height});
     var canvas = this.display.getContainer();
     var container = document.getElementById("container");
@@ -40,6 +43,7 @@ var Game = {
 
     setUpGenerators();
     var nStr = new Structure('Artificial womb', 'artificialWomb');
+    createData();
     nStr.start();
     nStr.finish();
 
@@ -54,6 +58,8 @@ var Game = {
     food : 100,
     materials : 100,
   },
+  initialPopulation : 12,
+  initialHappiness : 60,
   storage : {
     food: 100,
     materials : 100,
@@ -75,9 +81,10 @@ var Game = {
     //action: ['',false],
     view : '',
     aux: null, //Additional info for the view.
+    defaultDisplay: '',
   },
   date: 0,
-  speed:1/(10 * 1000), //5 seconds per in-game day
+  speed:1/(5 * 1000), //23 seconds per in-game week -> 1 year 20 min
   lastFrameTimeMs : 0,
   timestep : 1000/10,
   maxFPS : 10,
@@ -103,7 +110,14 @@ var Game = {
       var occupation = 'farming';
       var id = this.idCount;
       this.idCount++;
-      var citizen = new Citizen(id, name, surname, age, sex, occupation);
+      stats = {
+        happiness: Game.initialHappiness,
+        hunger: 20,
+        intEmo : 20, //Emotional intelligence, reduces impact of negative events.
+        intTec : 50,
+        productivity : 0, //updated real-time average of intTec and happiness
+      };
+      var citizen = new Citizen(id, name, surname, age, sex, occupation, stats);
       this.citizens[occupation][citizen.id] = citizen;
     }
 
@@ -121,7 +135,8 @@ var Game = {
   maleNameG : null,
   femaleNameG : null,
   surnameG: null,
-  population : function(){
+  population : [this.initialPopulation,this.initialHappiness],
+  getPopulation : function(){
     var count = 0;
     var happiness = 0;
     var professions = Object.keys(Game.citizens);
@@ -133,12 +148,14 @@ var Game = {
         happiness += Game.citizens[professions[i]][citizenIds[j]].stats.happiness;
       }
     }
+    Game.population = [count, happiness/count];
     return [count, happiness/count];
   },
   createInitialCitizens : function() {
     if (this.maleNameG.generate() !== '' && this.femaleNameG.generate() !== '' &&
         this.surnameG.generate() !== ''  ) {
-      this.addCitizens(12);
+      this.addCitizens(this.initialPopulation);
+      Game.loading = false;
     }
   },
     //Game functions
@@ -146,12 +163,68 @@ var Game = {
     Game.messages.push(message);
     ui.act();
   },
+  weekUpdate : function() {
+
+    if (Math.random() < 0.25) {
+      Game.randomNews();
+    }
+    console.log('A week passes...');
+    console.log('Rebel progress: ' + Game.factions['rebels'].perkProgress);
+    factions = Object.keys(Game.factions)
+    var factionsDict = {}
+    factions.forEach(function(faction) {
+      factionsDict[faction] = {
+        join : [],
+        leave : []
+      }
+    });
+    var professions = Object.keys(Game.citizens);
+    for (var i = 0; i<professions.length; i++) {
+      var citizenIds = Object.keys(Game.citizens[professions[i]]);
+      for (var j = 0; j<citizenIds.length; j++) {
+        //console.log(Game.citizens[professions[i]][j].stats)
+        actions = Game.citizens[professions[i]][citizenIds[j]].checkFactions();
+        if (actions.leave.length != 0) {
+          actions.leave.forEach(function(faction){
+            factionsDict[faction.name].leave.push(Game.citizens[professions[i]][citizenIds[j]]);
+          })
+        }
+        if (actions.join.length != 0) {
+          actions.join.forEach(function(faction){
+            factionsDict[faction.name].join.push(Game.citizens[professions[i]][citizenIds[j]]);
+          })
+        }
+      }
+    }
+    factions = Object.keys(factionsDict);
+    factions.forEach(function(faction) {
+      var factionObj = Game.factions[faction];
+      var prevFactionMembers = factionObj.memberCount();
+      factionObj.addMembers(factionsDict[faction].join)
+      factionObj.removeMembers(factionsDict[faction].leave)
+      var net = factionsDict[faction].join.length - factionsDict[faction].leave.length;
+      if (factionObj.memberCount() > 0 && prevFactionMembers == 0) {
+        Game.addNews(factionObj.news.startNews().random().format(factionsDict[faction].join.random().name));
+      } else if (factionObj.memberCount() == 0 && prevFactionMembers > 0) {
+        Game.addNews(factionObj.news.disbandNews().random().format(factionsDict[faction].leave.random().name));
+      } else if ( net > 0 && Math.random() < 0.3) {
+        Game.addNews(factionObj.news.growNews().random().format(factionsDict[faction].join.random().name));
+      } else if (net < 0 && Math.random() < 0.3) {
+        Game.addNews(factionObj.news.shrinkNews().random().format(factionsDict[faction].leave.random().name))
+      }
+    })
+  },
+  prevWeek : 0,
   update : function(delta) { //Update game variables.
     var timeDelta = Game.speed * delta
     Game.date += timeDelta;
     Game.shipProduction(timeDelta);
     Game.citizensUpdate(timeDelta);
-
+    Game.factionUpdate(timeDelta);
+    if (Math.floor(Game.date) > Game.prevWeek) {
+      Game.weekUpdate();
+    }
+    Game.prevWeek = Math.floor(Game.date);
 
   },
   shipProduction: function(delta) {
@@ -175,7 +248,7 @@ var Game = {
     }
 
     //var foodAvailable = this.resources.food/this.population()[0];
-    var foodAvailable = this.policies.foodConsumption*timeDelta*this.resources.food/this.population()[0];
+    var foodAvailable = this.policies.foodConsumption*timeDelta*this.resources.food/this.getPopulation()[0];
     var info = {
       'foodAvailable' :foodAvailable,
     };
@@ -218,6 +291,10 @@ var Game = {
     }
   },
   mainLoop: function(timestamp) {
+    if (Game.loading) {
+      requestAnimationFrame(Game.mainLoop);
+      return
+    };
     if (timestamp < Game.lastFrameTimeMs + (1000 / Game.maxFPS)) {
       requestAnimationFrame(Game.mainLoop);
       return;
@@ -230,6 +307,66 @@ var Game = {
     }
     ui.act();
     requestAnimationFrame(Game.mainLoop);
+  },
+  factions : {},
+  createFaction : function(name, leader, joinCond, leaveCond, support, opposite, perk) {
+    var faction = new Faction(name, leader, joinCond, leaveCond, support, opposite, perk);
+    Game.factions[name] = faction;
+    return faction
+  },
+  factionAddPerkProgress : function(faction,timeDelta) {
+    var progressPerWeekper1Percent = 0.19 // This makes a 100% with 20% faction in 6 months.
+    //console.log(faction.memberCount()); console.log(Game.population[0]);
+    var factionPercent = 100*faction.memberCount()/Game.population[0];
+    //factionPercent = 20; //NOTE for debug
+    previousProgress = faction.perkProgress //To know if a limit has been surpassed.
+    faction.perkProgress += timeDelta*progressPerWeekper1Percent*factionPercent;
+    if (previousProgress < 50 && faction.perkProgress >= 50) {
+      Game.addNews(faction.news.perk50().random())
+    } else if (previousProgress < 85 && faction.perkProgress >= 85) {
+      Game.addNews(faction.news.perk85().random())
+    }
+    if (faction.perkProgress >= 100) {
+      auxFunctions[faction.perk]();
+      faction.perkProgress = 0;
+    }
+  },
+  factionUpdate : function(timeDelta) {
+    for (var key in Game.factions) {
+      if(Game.factions.hasOwnProperty(key)) {
+        var faction = Game.factions[key];
+        Game.factionAddPerkProgress(faction,timeDelta);
+      }
+    }
+  },
+  addNews : function(text) {
+    len = text.length; //74, 67
+    if (len > 65) {
+      console.log('Too long news: ' + text + '. Max length: 65, lenght: '+ len)
+      return false
+    }
+    under = repeat('_',65-len);
+    text = text + under + 'Week ' + Math.floor(Game.date);
+    Game.news.unshift(text);
+    return true
+  },
+  randomNews : function() {
+    text = Data.randomNews().random();
+    citizen = Game.getRandomCitizen().name;
+    Game.addNews(text.format(citizen));
+
+  },
+  getRandomCitizen : function(){
+    list = [];
+    var professions = Object.keys(Game.citizens);
+    for (var i = 0; i<professions.length; i++) {
+      var citizenIds = Object.keys(Game.citizens[professions[i]]);
+      for (var j = 0; j<citizenIds.length; j++) {
+          //console.log(Game.citizens[professions[i]][j].stats)
+          list.push(Game.citizens[professions[i]][citizenIds[j]]);
+      }
+    }
+    return list.random()
   }
 }
 
@@ -438,5 +575,14 @@ var viewList = {  //List of functions that can be used with menu and file opts
     var citizen = new Citizen(id, name, surname, age, sex, occupation);
     Game.citizens[occupation][citizen.id] = citizen;
     Game.player.file = null;
-  }
+  },
+  'default' : function() {
+    Game.player.defaultDisplay = "\n___________________________Nels BroadCast News___________________________\n\n";
+    Game.news.forEach(function(news, index) {
+      if (index <= 5 ) {
+        Game.player.defaultDisplay += news + '\n\n';
+      }
+
+    })
+  },
 }

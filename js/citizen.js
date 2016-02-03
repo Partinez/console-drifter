@@ -1,18 +1,13 @@
-function Citizen(id, name, surname, age, sex, occupation) {
+function Citizen(id, name, surname, age, sex, occupation, stats) {
   this.id = id;
   this.name = name;
   this.surname = surname;
   this.age = age;
   this.sex = sex;
   this.occupation = occupation;
-  this.stats = {
-    happiness: 99,
-    hunger: 20,
-    intEmo : 20, //Emotional intelligence, reduces impact of negative events.
-    intTec : 50,
-    productivity : 0, //updated real-time average of intTec and happiness
-  },
+  this.stats = stats;
   this.genes = this.generateGenes();
+  this.factions = [];
 }
 
 Citizen.prototype.generateGenes = function() {
@@ -97,4 +92,52 @@ Citizen.prototype.changeProf = function(prof) {
   this.occupation = prof;
   Game.citizens[prof][this.id] = this;
 
+}
+
+Citizen.prototype.checkFactions = function() {
+  actions = {
+    leave : [],
+    join : []
+  }
+  //leave
+  this.factions.forEach(function(factionName) {
+    faction = Game.factions[factionName];
+    var stat = faction.leaveCondStat;
+    var value = faction.leaveCondValue;
+    var level = faction.leaveCondLevel;
+    if (level == 'higher' && this.stats[stat] > value) {
+      if (Math.random() < 0.6 ) { //60% to leave
+        actions.leave.push(faction);
+      }
+    } else if (level == 'lower' && this.stats[stat] < value) {
+      if (Math.random() < 0.6 ) { //60% to leave
+        actions.leave.push(faction);
+      }
+    }
+  }, this);
+
+  //join
+  for (var key in Game.factions) {
+    if(Game.factions.hasOwnProperty(key)) {
+      var faction = Game.factions[key];
+      var stat = faction.joinCondStat;
+      var value = faction.joinCondValue;
+      var level = faction.joinCondLevel;
+      if (level == 'higher' && this.stats[stat] > value) {
+        if (Math.random() < 0.2 ) { //20% to join
+          actions.join.push(faction);
+        }
+      } else if (level == 'lower' && this.stats[stat] < value) {
+        if (Math.random() < 0.2 ) { //20% to join
+          actions.join.push(faction);
+        }
+      }
+    }
+  }
+  return actions
+}
+
+
+Citizen.prototype.ageInYears = function() {
+  return Math.floor(this.age/52)
 }

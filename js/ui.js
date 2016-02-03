@@ -28,6 +28,8 @@ var ui = { //manages UI
         backAvailable = true;
       }
       ui.drawMenu(firstOfEach(Game.player.position.options).concat(firstOfEach(Game.player.position.actions)),false,backAvailable);
+      viewList['default'](); //This is the display when no file is used.
+      ui.drawTextContent(Game.player.defaultDisplay);
     }
 
 
@@ -86,7 +88,7 @@ var ui = { //manages UI
       }
     }
     if (more) { Game.display.drawText(x+56, y+4,"[9] More");}
-    if (back) { Game.display.drawText(x+56, y+6,"[0] Back");}
+    if (back) { Game.display.drawText(x+56, y+6,"[Space] Back");}
     // do whatever
 
   },
@@ -148,10 +150,10 @@ var ui = { //manages UI
     var x = 5;
     ui.drawBox(x,1,18,3);
     ui.drawbg(x+13,2,4,1);
-    Game.display.drawText(x+13,2,Game.population()[0]+'');
+    Game.display.drawText(x+13,2,Game.population[0]+'');
     Game.display.drawText(x+2,2,'Population:');
     ui.drawbg(x+28,2,4,1);
-    Game.display.drawText(x+28,2,Math.floor(Game.population()[1])+'');
+    Game.display.drawText(x+28,2,Math.floor(Game.population[1])+'');
     Game.display.drawText(x+17,2,'Happiness:');
   },
 }

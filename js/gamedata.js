@@ -1,7 +1,6 @@
 
 
 
-
 var messageFolder = new gameFolder('Messages');
 
 
@@ -69,3 +68,75 @@ var baseFolder = new gameFolder('BASE');
 baseFolder.addFolder(manaFolder);
 baseFolder.addFolder(edictFolder);
 baseFolder.addFolder(messageFolder);
+
+
+
+createData = function() {
+  rebels = Game.createFaction('rebels', null, {stat : 'happiness', value : 70, level : 'lower'}, {stat : 'happiness', value : 70, level : 'higher'}, 100, null, 'rebellion');
+  rebels.news = {
+    startNews : function() {
+      return [
+        'It looks like some citizens are not happy with our government.',
+        '%s wanted to express their dissatisfaction with our mayor.',
+        'rumors about rebellion are spreading among the citizens.'
+      ]
+    },
+    growNews : function() {
+      return [
+        'There seems to be more unsatisfied people with our Mayor each day.',
+        '%s wanted to express their dissatisfaction with our Mayor.',
+        'Rumours about rebellion are growing stronger.',
+      ]
+    },
+    shrinkNews : function() {
+      return [
+        'There seems to be less unsatisfied people with our Mayor each day.',
+        '%s said: \'The mayor is not that bad, he is ok I guess\'.',
+        'Rumours about rebellion are not as common now.'
+      ]
+    },
+    disbandNews : function() {
+      return [
+        'Everyone seems happy with our government now.',
+        'Rumours about rebellion have been quiet for some time now.'
+      ]
+    },
+    perk50 : function() {
+      return [
+        "'If I were the Mayor, I'd be worried about a rebellion'",
+      ]
+    },
+
+    perk85 : function() {
+      return [
+        "Some people are extremely unhappy with our Mayor.",
+        "Someone heard rumors about a rebellion very soon."
+      ]
+    },
+  }
+}
+
+Data = {
+  randomNews : function() {
+    return [
+      '\'Wow, the ship sure does taste like chicken\' said %s.',
+      'The %s infestation in the %s floor was eliminated.'.format(
+        ['rat','cat','mice','cockroach','butterflies'].random(),
+        ['first','second','third'].random()),
+      'Is this thing working?',
+      '%s just %s %s in %s. %s.'.format(
+        '%s',
+        ['threw', 'found'].random(),
+        ['a candle', 'an earplug','a mosquito', 'a teabag', 'a book', 'a bottle'].random(),
+        ['the toilet', 'a box', 'the trash can', 'the garden', 'their bed'].random(),
+        ['Weird','Gross','Awesome'].random()),
+      '%s love the new recipe from %s: \'%s\'.'.format(
+        ['Young people','Old people','Boring people', 'Farmers', 'Cool people'].random(),
+        '%s',
+        ['club sandwich', 'chocolate salami', 'chili cupcakes', 'not-chicken'].random()),
+      '%s made cake for everyone!',
+      'Did a mysterious orange cloud just pass next to the Nels?'
+    ]
+  },
+
+}
